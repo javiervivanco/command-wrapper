@@ -23,13 +23,14 @@
   (commmand-run
    (let* ([format-rest (lambda (v)
                          (cond [(or (string? v) (number? v)) (~a (param-asign) "\"" v "\"")]
+                               [(symbol? v)     (~a (param-asign)  (symbol->string v))]
                                [(boolean? v)    (~a (param-asign) (if v "true" "false"))]
-                               [(list?)         ((param-list) v)]
                                [(eq? v '())     ""]
+                               [(list? v)         ((param-list) v)]                               
                                [else (error v)]))]
           [formatkv    (lambda (k-v)
                          (let* ([param (car k-v) ]
-                                [dash  (if (equal? (string-ref param 0) #\-) "-" "--")]
+                                [dash  (if (equal? (string-ref param 0) #\-) "" "--")]
                                 [value (format-rest (cdr k-v))])
                            (~a dash param value )))])
      (append (list subcommand)
@@ -38,11 +39,16 @@
 
 (define (make-command-wrapper cmd #:post-process [post (command/post-process)] #:param-asign [~param-asign (param-asign)])
   (make-keyword-procedure
-   (lambda (kws kw-args subcommand . rest)
-    (parameterize ([command     cmd]
-                   [param-asign ~param-asign]
-                   [command/post-process post])
-     (command-kw-args-rest kws kw-args subcommand rest)))))
+   (lambda (kws kw-args . ~rest)
+     (let* ([~subcmd    (if (null? ~rest) ""   (car ~rest))]
+            [rest       (if (null? ~rest) null (cdr ~rest))]
+            [subcommand (cond
+                          [(symbol? ~subcmd) (symbol->string ~subcmd) ]
+                          [else               ~subcmd])])
+       (parameterize ([command     cmd]
+                      [param-asign ~param-asign]
+                      [command/post-process post])
+         (command-kw-args-rest kws kw-args subcommand rest))))))
 
 
 
@@ -53,9 +59,9 @@
          [system/cmd    (format "~a ~a  1> ~a"  (command) cmd  (path->string fout))]
          [code          (system/exit-code system/cmd)]
          [stdout        (string-trim (file->string fout) #:left? #f)]
-;;         [stdout/nil?   (equal? "" stdout)]
+         ;;         [stdout/nil?   (equal? "" stdout)]
          [subcommand/code? (lambda (cmd? return) (and (equal? subcommand cmd?) (= return code)))])
     ((command/post-process) stdout code subcommand/code?  system/cmd )
-))
+    ))
 
 
