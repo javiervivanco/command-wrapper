@@ -1,6 +1,6 @@
 #lang racket/base
 (require racket/system racket/string racket/format racket/file racket/match racket/port racket/private/port racket/private/streams)
-(provide (all-defined-out))
+(provide make-command-wrapper --)
 
 
 
@@ -14,9 +14,6 @@
     (putenv "PWD" (path->string (current-directory)))
     (f)))
 
-
-(define-syntax-rule (define-subcommands CMD ...)
-  (define-values (CMD ...) (values (symbol->string 'CMD) ...)))
 
 (define (path-or-ok-string? s)
   ;; use `path-string?' t check for nul characters in a string,
@@ -102,7 +99,7 @@
             (-- (keyword->string k) v))
           (map arg->cmd rest)))
 
-(define (make-command-wrapper command-name std-out )
+(define (make-command-wrapper command-name process-out #:args [args '()])
   (let
       ([COMMAND_BIN_PATH (if (string? command-name) command-name (error 'command "not found"))])
     (unless COMMAND_BIN_PATH (error 'command "not found ~a command-name" command-name))
@@ -112,11 +109,7 @@
        
        (define-values (exit-code stdout-result)
          (do-system  (~a COMMAND_BIN_PATH " " (string-join cmd-args  " "))))
-       (cond
-         [(= exit-code 0)      (std-out (list subcommand kws kw-args rest) stdout-result)]
-         [else                 
-          (error 'command "~a failed: ~a" command-name subcommand )
-          (current-continuation-marks)])))))
+       (process-out (list subcommand kws kw-args rest) exit-code stdout-result)))))
 
 
 
