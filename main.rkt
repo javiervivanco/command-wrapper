@@ -1,6 +1,6 @@
 #lang racket/base
 (require racket/system racket/string racket/format racket/file racket/match racket/port racket/private/port racket/private/streams racket/list)
-(provide make-command-wrapper -- arg->cmd)
+(provide make-command-wrapper -- arg->cmd COMMAND_DEBUG)
 
 (define COMMAND_DEBUG (make-parameter #t))
 
